@@ -371,4 +371,167 @@ Pendente (proximos passos naturais):
 
 ---
 
-Se quiser, no proximo passo eu gero uma versao 2 deste documento com diagramas Mermaid (sequencia e arquitetura) para facilitar onboarding de qualquer dev novo no projeto.
+## 17. Roteiro de Revisao (Como Se Fosse Implementar do Zero)
+
+Use esta ordem sempre. Nao pule etapa.
+
+### Etapa A: Entender entrada da aplicacao
+1. Leia `client/src/main.tsx`.
+2. Leia `client/src/App.tsx`.
+
+Objetivo:
+- descobrir como a app sobe
+- quais providers globais existem
+- quais rotas existem
+
+Perguntas que voce precisa responder:
+- Quem cria o cliente de API?
+- Quem monta as rotas?
+- Quais contextos globais existem (tema, carrinho, etc)?
+
+### Etapa B: Entender entrada do backend
+1. Leia `server/_core/index.ts`.
+2. Leia `server/routers.ts`.
+3. Leia `server/_core/trpc.ts`.
+
+Objetivo:
+- descobrir onde as rotas de API sao montadas
+- separar procedure publica, protegida e admin
+
+Perguntas:
+- Qual endpoint recebe todas chamadas tRPC?
+- Quais modulos de API estao plugados no `appRouter`?
+
+### Etapa C: Entender banco primeiro (estrutura)
+1. Leia `drizzle/schema.ts`.
+2. Leia `server/db.ts`.
+3. Leia migrations em `drizzle/`.
+
+Objetivo:
+- saber quais tabelas existem
+- entender quais campos cada feature usa
+
+Perguntas:
+- Qual tabela representa produtos?
+- Qual tabela representa usuarios?
+- Onde estao pedidos/downloads e o que ainda nao esta usado?
+
+### Etapa D: Entender autenticacao (fim a fim)
+1. Leia `server/_core/context.ts`.
+2. Leia `server/_core/sdk.ts`.
+3. Leia `server/_core/oauth.ts`.
+4. Leia `client/src/_core/hooks/useAuth.ts`.
+5. Leia `client/src/hooks/useFirebaseAuth.ts`.
+6. Leia `client/src/pages/Login.tsx` e `client/src/pages/Register.tsx`.
+
+Objetivo:
+- entender como request vira usuario autenticado
+- entender diferenca entre OAuth e Firebase
+
+Mapa de chamada (auth):
+1. Front chama `trpc.auth.me`.
+2. Backend cria contexto em `createContext`.
+3. Contexto chama `sdk.authenticateRequest`.
+4. SDK valida cookie/JWT, busca usuario no DB.
+5. `auth.me` retorna `ctx.user`.
+6. Front `useAuth` combina isso com estado Firebase.
+
+### Etapa E: Entender produtos (feature principal)
+1. Leia `server/_core/productsRouter.ts`.
+2. Leia `client/src/pages/Products.tsx`.
+3. Leia `client/src/pages/Product.tsx`.
+4. Leia `client/src/components/ProductCard.tsx`.
+
+Objetivo:
+- ligar tela de lista e detalhe com procedures do backend
+
+Mapa de chamada (lista):
+- `Products.tsx` -> `trpc.products.list.useQuery` -> `productsRouter.list` -> `db.select(products)`.
+
+Mapa de chamada (detalhe):
+- `Product.tsx` -> `trpc.products.bySlug.useQuery` -> `productsRouter.bySlug` -> `db.select(products)`.
+
+Mapa de chamada (admin cadastro):
+- `AdminProducts.tsx` -> `handleCreateProduct` -> `trpc.products.create.useMutation` -> `productsRouter.create` -> `db.insert(products)`.
+
+### Etapa F: Entender carrinho e checkout
+1. Leia `client/src/contexts/CartContext.tsx`.
+2. Leia `client/src/pages/Cart.tsx`.
+3. Leia `client/src/pages/Checkout.tsx`.
+
+Objetivo:
+- entender estado global local e persistencia em localStorage
+
+Mapa de chamada:
+- `ProductCard`/`Product` -> `addItem` -> `CartContext` (estado + localStorage).
+- `Checkout` -> `handleFinishPurchase` -> `clearCart`.
+
+### Etapa G: Entender layout e protecao de paginas
+1. Leia `client/src/components/StorefrontLayout.tsx`.
+2. Leia `client/src/components/DashboardLayout.tsx`.
+
+Objetivo:
+- entender como o menu muda com auth
+- entender como dashboard bloqueia usuario anonimo
+
+## 18. Como Revisar Cada Arquivo (Metodo de Analise)
+
+Para cada arquivo que abrir, siga o mesmo checklist:
+1. O que este arquivo expoe? (componente, hook, router, funcao utilitaria)
+2. Quais entradas ele recebe? (props, params, input zod, req)
+3. Quais dependencias ele chama? (hook, trpc, db, sdk)
+4. Quais saidas ele produz? (UI, return, side effects)
+5. Em caso de erro, como ele trata?
+
+Se voce responder essas 5 perguntas por arquivo, voce entende qualquer modulo.
+
+## 19. Ordem de Revisao Recomendada em 1 Semana
+
+Dia 1:
+- `client/src/main.tsx`
+- `client/src/App.tsx`
+- `server/_core/index.ts`
+- `server/routers.ts`
+
+Dia 2:
+- `drizzle/schema.ts`
+- `server/db.ts`
+
+Dia 3:
+- `server/_core/context.ts`
+- `server/_core/sdk.ts`
+- `server/_core/oauth.ts`
+
+Dia 4:
+- `client/src/_core/hooks/useAuth.ts`
+- `client/src/hooks/useFirebaseAuth.ts`
+- `client/src/pages/Login.tsx`
+- `client/src/pages/Register.tsx`
+
+Dia 5:
+- `server/_core/productsRouter.ts`
+- `client/src/pages/Products.tsx`
+- `client/src/pages/Product.tsx`
+
+Dia 6:
+- `client/src/contexts/CartContext.tsx`
+- `client/src/pages/Cart.tsx`
+- `client/src/pages/Checkout.tsx`
+
+Dia 7:
+- `client/src/pages/AdminProducts.tsx`
+- Revisao completa de quem chama quem
+
+## 20. Onde Voce Mais Ganha Conhecimento Rapido
+
+Foque nestes 4 arquivos primeiro:
+1. `server/_core/productsRouter.ts`
+2. `client/src/pages/Products.tsx`
+3. `client/src/_core/hooks/useAuth.ts`
+4. `client/src/contexts/CartContext.tsx`
+
+Se dominar esses 4, voce entende os padroes base do projeto quase inteiro.
+
+---
+
+Se quiser, eu posso gerar a versao visual com diagramas Mermaid (arquitetura + sequencia de login + sequencia de cadastro de produto) dentro deste mesmo arquivo.
