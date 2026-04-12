@@ -82,18 +82,25 @@ Uma plataforma moderna e completa para vender produtos digitais, com catálogo, 
 - **Shadcn/UI** - Component library
 - **React Query (TanStack)** - Data fetching
 - **tRPC** - Type-safe API
+- **Firebase SDK** - Auth, Firestore, Storage
 
 ### Backend
 - **Node.js** - Runtime
 - **Express** - Server framework
 - **tRPC** - Type-safe API
 - **Drizzle ORM** - Database query builder
-- **MySQL** - Database
+- **MySQL** - Database (ou Firestore)
 
 ### Infrastructure
-- **AWS S3** - File storage
+- **Vercel** - Hosting & deployment
+- **Firebase** - Auth, Database, Storage
 - **Stripe** - Payment processing
-- **Docker** - Containerization (optional)
+
+### Cloud Services
+- **AWS S3** - File storage (opcional)
+- **Firebase Cloud Storage** - File storage (recomendado)
+- **Firebase Authentication** - Login/Auth
+- **Firestore** - Database NoSQL
 
 ---
 
@@ -305,6 +312,28 @@ pnpm db:push
 
 # Ver log de migrations
 pnpm db:log
+```
+
+---
+
+## 🚀 Deployment
+
+### Vercel + Firebase
+
+Para fazer deploy do seu proyecto na Vercel com Firebase:
+
+1. **[Leia DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md)** - Guia completo passo a passo
+2. **[Veja FIREBASE_INTEGRATION.md](./FIREBASE_INTEGRATION.md)** - Como integrar Firestore
+3. **[Use VERCEL_FIREBASE_CHECKLIST.md](./VERCEL_FIREBASE_CHECKLIST.md)** - Checklist de deployment
+
+**Resumo rápido:**
+```bash
+# 1. Setup Firebase em firebase.google.com
+# 2. Copiar credenciais para .env
+# 3. Push para GitHub
+# 4. Conectar Vercel em vercel.com
+# 5. Adicionar variáveis de ambiente
+# 6. Deploy automático
 ```
 
 ---
