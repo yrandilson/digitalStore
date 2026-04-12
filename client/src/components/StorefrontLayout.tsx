@@ -78,8 +78,8 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </Button>
             ) : (
-              <Button size="sm" onClick={() => (window.location.href = getLoginUrl())}>
-                Entrar
+              <Button size="sm" asChild>
+                <Link href="/login">Entrar</Link>
               </Button>
             )}
           </div>

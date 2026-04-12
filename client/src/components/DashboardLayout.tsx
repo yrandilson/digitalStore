@@ -23,7 +23,7 @@ import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, Package2, PanelLeft, ReceiptText, Settings2, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
@@ -65,20 +65,24 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
+              Entre para continuar
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              O dashboard exige autenticação. Você pode entrar com email e senha ou usar OAuth.
             </p>
           </div>
+          <Button size="lg" className="w-full shadow-lg hover:shadow-xl transition-all" asChild>
+            <Link href="/login">Entrar com email</Link>
+          </Button>
           <Button
+            variant="outline"
             onClick={() => {
               window.location.assign(getLoginUrl());
             }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full"
           >
-            Sign in
+            Entrar com OAuth
           </Button>
         </div>
       </div>
