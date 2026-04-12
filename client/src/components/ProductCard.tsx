@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useCart } from "@/contexts/CartContext";
 import { Star, ShoppingCart } from "lucide-react";
 
 interface ProductCardProps {
@@ -28,6 +29,8 @@ export function ProductCard({
   category,
   featured,
 }: ProductCardProps) {
+  const { addItem } = useCart();
+
   const formattedPrice = parseFloat(price).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -103,7 +106,17 @@ export function ProductCard({
               size="sm"
               onClick={(e) => {
                 e.preventDefault();
-                // TODO: Add to cart functionality
+                addItem(
+                  {
+                    id,
+                    name,
+                    slug,
+                    description: null,
+                    price,
+                    imageUrl: imageUrl ?? null,
+                  },
+                  1
+                );
               }}
             >
               <ShoppingCart size={16} />

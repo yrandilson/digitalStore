@@ -1,9 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product } from "@shared/types";
+
+export interface CartProduct {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: string;
+  imageUrl: string | null;
+}
 
 export interface CartItem {
   id: string; // Unique identifier for this cart item
-  product: Product;
+  product: CartProduct;
   quantity: number;
 }
 
@@ -11,7 +19,7 @@ interface CartContextType {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
-  addItem: (product: Product, quantity: number) => void;
+  addItem: (product: CartProduct, quantity: number) => void;
   updateItemQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -48,7 +56,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (product: Product, quantity: number) => {
+  const addItem = (product: CartProduct, quantity: number) => {
     setItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.product.id === product.id);
 

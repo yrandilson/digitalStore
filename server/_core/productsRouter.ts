@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { router, publicProcedure } from "./trpc";
 import { getDb } from "../db";
-import { products, categories, reviews } from "../../drizzle/schema";
-import { eq, like, desc, asc } from "drizzle-orm";
+import { products, categories } from "../../drizzle/schema";
+import { and, asc, count, desc, eq, like } from "drizzle-orm";
 
 export const productsRouter = router({
   /**
@@ -23,46 +23,43 @@ export const productsRouter = router({
       if (!db) throw new Error("Database connection failed");
 
       const offset = (input.page - 1) * input.limit;
-      let query = db.select().from(products).where(eq(products.active, true));
+      const baseFilters = [eq(products.active, true)];
 
       // Filter by category if provided
       if (input.categoryId) {
-        query = db.select().from(products).where(
-          eq(products.active, true) && eq(products.categoryId, input.categoryId)
-        );
+        baseFilters.push(eq(products.categoryId, input.categoryId));
       }
 
+      const whereClause = baseFilters.length === 1 ? baseFilters[0] : and(...baseFilters);
+
+      let data: typeof products.$inferSelect[] = [];
+
       // Apply sorting
-      let sortedQuery = query;
       switch (input.sortBy) {
         case "popular":
-          sortedQuery = query.orderBy(desc(products.salesCount));
+          data = await db.select().from(products).where(whereClause).orderBy(desc(products.salesCount)).limit(input.limit).offset(offset);
           break;
         case "price-asc":
-          sortedQuery = query.orderBy(asc(products.price));
+          data = await db.select().from(products).where(whereClause).orderBy(asc(products.price)).limit(input.limit).offset(offset);
           break;
         case "price-desc":
-          sortedQuery = query.orderBy(desc(products.price));
+          data = await db.select().from(products).where(whereClause).orderBy(desc(products.price)).limit(input.limit).offset(offset);
           break;
         case "rating":
-          sortedQuery = query.orderBy(desc(products.rating));
+          data = await db.select().from(products).where(whereClause).orderBy(desc(products.rating)).limit(input.limit).offset(offset);
           break;
         case "newest":
         default:
-          sortedQuery = query.orderBy(desc(products.createdAt));
+          data = await db.select().from(products).where(whereClause).orderBy(desc(products.createdAt)).limit(input.limit).offset(offset);
       }
-
-      const data = await sortedQuery.limit(input.limit).offset(offset);
       
       // Get total count for pagination
-      const countQuery = input.categoryId
-        ? db.select({ count: products.id }).from(products).where(
-            eq(products.active, true) && eq(products.categoryId, input.categoryId)
-          )
-        : db.select({ count: products.id }).from(products).where(eq(products.active, true));
-      
-      const countResult = await countQuery;
-      const total = countResult[0]?.count || 0;
+      const countResult = await db
+        .select({ count: count() })
+        .from(products)
+        .where(whereClause);
+
+      const total = Number(countResult[0]?.count || 0);
       const totalPages = Math.ceil(total / input.limit);
 
       return {
@@ -124,8 +121,7 @@ export const productsRouter = router({
       const results = await db
         .select()
         .from(products)
-        .where(eq(products.active, true))
-        .where(like(products.name, searchTerm))
+        .where(and(eq(products.active, true), like(products.name, searchTerm)))
         .limit(input.limit);
 
       return results;
@@ -154,7 +150,7 @@ export const productsRouter = router({
       const featuredProducts = await db
         .select()
         .from(products)
-        .where(eq(products.featured, true) && eq(products.active, true))
+        .where(and(eq(products.featured, true), eq(products.active, true)))
         .orderBy(desc(products.createdAt))
         .limit(input.limit);
 

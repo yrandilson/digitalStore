@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { StorefrontLayout } from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 export default function Products() {
   const [page, setPage] = useState(1);
@@ -21,7 +22,6 @@ export default function Products() {
     "newest"
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
 
   // Fetch products
   const { data: productsData, isLoading: productsLoading } = trpc.products.list.useQuery({
@@ -44,9 +44,8 @@ export default function Products() {
   const isPaginated = searchQuery.length <= 2;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-blue-50 dark:bg-slate-900 py-8 mb-8">
+    <StorefrontLayout>
+      <div className="bg-muted/30 py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Catálogo de Produtos</h1>
           <p className="text-muted-foreground">
@@ -55,7 +54,7 @@ export default function Products() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-12">
+      <div className="container mx-auto px-4 pb-12 pt-8">
         {/* Filters Section */}
         <div className="mb-8 space-y-4">
           {/* Search Bar */}
@@ -150,7 +149,7 @@ export default function Products() {
         {!productsLoading && !searchLoading && displayProducts && displayProducts.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {displayProducts.map((product) => (
+              {displayProducts.map((product: any) => (
                 <ProductCard
                   key={product.id}
                   id={product.id}
@@ -213,6 +212,6 @@ export default function Products() {
           )
         )}
       </div>
-    </div>
+    </StorefrontLayout>
   );
 }

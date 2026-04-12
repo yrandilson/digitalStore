@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { useRoute } from "wouter";
+import { useState } from "react";
+import { Link, useRoute } from "wouter";
+import { StorefrontLayout } from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCart } from "@/contexts/CartContext";
 import { Star, ShoppingCart, Download, Share2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -12,6 +14,7 @@ export default function Product() {
   const [, params] = useRoute("/products/:slug");
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const { addItem } = useCart();
 
   const slug = params?.slug as string;
 
@@ -23,7 +26,7 @@ export default function Product() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <StorefrontLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="grid md:grid-cols-2 gap-8">
             <Skeleton className="h-96 w-full" />
@@ -35,20 +38,20 @@ export default function Product() {
             </div>
           </div>
         </div>
-      </div>
+      </StorefrontLayout>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-background">
+      <StorefrontLayout>
         <div className="container mx-auto px-4 py-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>Produto não encontrado</AlertDescription>
           </Alert>
         </div>
-      </div>
+      </StorefrontLayout>
     );
   }
 
@@ -62,23 +65,31 @@ export default function Product() {
   const handleAddToCart = async () => {
     setIsAdding(true);
     try {
-      // TODO: Implement add to cart
-      // await addToCart({ productId: product.id, quantity });
-      console.log(`Add ${quantity} of product ${product.id} to cart`);
+      addItem(
+        {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          description: product.description,
+          price: product.price,
+          imageUrl: product.imageUrl,
+        },
+        quantity
+      );
     } finally {
       setIsAdding(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <StorefrontLayout>
       {/* Breadcrumb */}
       <div className="bg-muted py-4 mb-8">
         <div className="container mx-auto px-4">
           <div className="text-sm text-muted-foreground">
-            <a href="/" className="hover:underline">Início</a>
+            <Link href="/" className="hover:underline">Início</Link>
             <span className="mx-2">/</span>
-            <a href="/products" className="hover:underline">Produtos</a>
+            <Link href="/products" className="hover:underline">Produtos</Link>
             <span className="mx-2">/</span>
             <span>{product.name}</span>
           </div>
@@ -243,6 +254,6 @@ export default function Product() {
           </Card>
         </div>
       </div>
-    </div>
+    </StorefrontLayout>
   );
 }

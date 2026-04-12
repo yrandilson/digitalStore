@@ -39,7 +39,7 @@ Ativar provedores:
 #### 2. Firestore Database
 ```
 Firebase Console → Firestore Database → Criar banco de dados
-- Modo: Iniciar em modo de produção
+- Modo: Iniciar em modo de teste
 - Localização: us-central1 (ou próximo a você)
 - Criar
 ```
@@ -122,6 +122,24 @@ git push -u origin main
 3. Conecte sua conta GitHub
 4. Selecione repositório `digitalStore`
 5. Clique "Import"
+
+### 2.1 Nome do Projeto (evitar erro de validação)
+
+Regras do nome na Vercel:
+- Até 100 caracteres
+- Somente minúsculas
+- Pode usar: letras, números, `.`, `_`, `-`
+- Não pode conter `---`
+
+Exemplos válidos:
+- `digital-store-yrandilson`
+- `digital-store-caa9f`
+- `digital_store_2026`
+
+Exemplos inválidos:
+- `Digital-Store` (maiúsculas)
+- `digital store` (espaço)
+- `digital---store` (três hífens seguidos)
 
 ### 3. Configurar Variáveis de Ambiente
 

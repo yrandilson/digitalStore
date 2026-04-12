@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Modo de teste: libera leitura/escrita por 30 dias.
+    match /{allPaths=**} {
+      allow read, write: if request.time < timestamp.date(2026, 5, 12);
+    }
+  }
+}
