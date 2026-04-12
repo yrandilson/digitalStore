@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { getLoginUrl } from "@/const";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { ArrowRight, Github, Mail } from "lucide-react";
 
 export default function Login() {
@@ -16,7 +16,9 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const params = new URLSearchParams(window.location.search);
   const missingOAuthConfig = params.get("auth") === "missing";
 
@@ -26,6 +28,7 @@ export default function Login() {
       return;
     }
 
+    setSuccessMessage(null);
     setErrorMessage(null);
     setIsSubmitting(true);
 
@@ -37,6 +40,27 @@ export default function Login() {
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setErrorMessage("Digite seu email para recuperar a senha.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsSendingReset(true);
+
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setSuccessMessage("Enviamos um link de recuperação para seu email.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha ao enviar recuperação de senha.";
+      setErrorMessage(message);
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
@@ -80,6 +104,13 @@ export default function Login() {
                 </Alert>
               ) : null}
 
+              {successMessage ? (
+                <Alert>
+                  <AlertTitle>Pronto</AlertTitle>
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -103,6 +134,14 @@ export default function Login() {
               <Button className="w-full" onClick={handleLogin} disabled={isSubmitting}>
                 {isSubmitting ? "Entrando..." : "Entrar"}
                 <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={handleResetPassword}
+                disabled={isSendingReset}
+              >
+                {isSendingReset ? "Enviando link..." : "Esqueci minha senha"}
               </Button>
 
               <div className="grid gap-3 pt-2">
