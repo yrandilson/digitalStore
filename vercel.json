@@ -2,11 +2,5 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "devCommand": "pnpm dev",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "functions": {
-    "api/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  }
+  "installCommand": "pnpm install --frozen-lockfile"
 }
