@@ -13,6 +13,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Validate that all required environment variables are set
+const requiredEnvVars = Object.keys(firebaseConfig);
+const missingVars = requiredEnvVars.filter(
+  (key) => !firebaseConfig[key as keyof typeof firebaseConfig]
+);
+
+if (missingVars.length > 0) {
+  console.error(
+    `❌ Missing Firebase environment variables: ${missingVars.join(", ")}`
+  );
+  console.error("📝 Make sure your .env file contains all required Firebase credentials");
+}
+
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
