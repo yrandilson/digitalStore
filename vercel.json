@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm build",
-  "outputDirectory": "dist",
+  "buildCommand": "pnpm build:vercel",
+  "outputDirectory": "dist/public",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install --frozen-lockfile"
 }
