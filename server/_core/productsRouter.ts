@@ -156,4 +156,69 @@ export const productsRouter = router({
 
       return featuredProducts;
     }),
+
+  /**
+   * Create a new product
+   */
+  create: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2).max(255),
+        description: z.string().min(2),
+        longDescription: z.string().min(2),
+        price: z.string().regex(/^\d+(\.\d{1,2})?$/),
+        categoryId: z.number().int().positive(),
+        imageUrl: z.string().url().optional().or(z.literal("")),
+        previewUrl: z.string().url().optional().or(z.literal("")),
+        featured: z.boolean().default(false),
+        active: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+
+      const slug = input.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80);
+
+      const existing = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(eq(products.slug, slug))
+        .limit(1);
+
+      if (existing[0]) {
+        throw new Error("Já existe produto com o mesmo slug");
+      }
+
+      await db.insert(products).values({
+        name: input.name,
+        slug,
+        description: input.description,
+        longDescription: input.longDescription,
+        price: input.price,
+        categoryId: input.categoryId,
+        imageUrl: input.imageUrl || null,
+        previewUrl: input.previewUrl || null,
+        featured: input.featured,
+        active: input.active,
+      });
+
+      const created = await db
+        .select()
+        .from(products)
+        .where(eq(products.slug, slug))
+        .limit(1);
+
+      if (!created[0]) {
+        throw new Error("Falha ao criar produto");
+      }
+
+      return created[0];
+    }),
 });
