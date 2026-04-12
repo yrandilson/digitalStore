@@ -4,9 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getLoginUrl } from "@/const";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowRight, Github, Mail } from "lucide-react";
 
 export default function Login() {
+  const params = new URLSearchParams(window.location.search);
+  const missingOAuthConfig = params.get("auth") === "missing";
+
   return (
     <StorefrontLayout>
       <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-7xl items-center px-4 py-12 sm:px-6 lg:px-8">
@@ -31,6 +35,15 @@ export default function Login() {
               <CardDescription>Use seu provedor de autenticação ou login por email.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              {missingOAuthConfig ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Login OAuth não configurado</AlertTitle>
+                  <AlertDescription>
+                    Defina no Vercel as variáveis VITE_OAUTH_PORTAL_URL e VITE_APP_ID, depois faça redeploy.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="voce@exemplo.com" />

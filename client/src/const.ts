@@ -1,5 +1,7 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
+export const OAUTH_MISSING_PATH = "/login?auth=missing";
+
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL?.trim();
@@ -7,7 +9,7 @@ export const getLoginUrl = () => {
 
   // In production, missing OAuth vars should not crash the app.
   if (!oauthPortalUrl || !appId) {
-    return "/";
+    return OAUTH_MISSING_PATH;
   }
 
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
@@ -17,7 +19,7 @@ export const getLoginUrl = () => {
   try {
     url = new URL(`${oauthPortalUrl}/app-auth`);
   } catch {
-    return "/";
+    return OAUTH_MISSING_PATH;
   }
 
   url.searchParams.set("appId", appId);
