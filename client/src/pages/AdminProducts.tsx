@@ -10,10 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 export default function AdminProducts() {
   const utils = trpc.useUtils();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [longDescription, setLongDescription] = useState("");
@@ -36,19 +39,32 @@ export default function AdminProducts() {
   const createMutation = trpc.products.create.useMutation({
     onSuccess: async () => {
       await utils.products.list.invalidate();
-      setName("");
-      setDescription("");
-      setLongDescription("");
-      setPrice("");
-      setImageUrl("");
-      setPreviewUrl("");
-      setFeatured(false);
-      setActive(true);
-      setErrorMessage(null);
-      setIsFormOpen(false);
+      toast.success("Produto cadastrado com sucesso");
+      resetForm();
     },
     onError: (error) => {
       setErrorMessage(error.message || "Falha ao cadastrar produto.");
+    },
+  });
+
+  const updateMutation = trpc.products.update.useMutation({
+    onSuccess: async () => {
+      await utils.products.list.invalidate();
+      toast.success("Produto atualizado com sucesso");
+      resetForm();
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || "Falha ao atualizar produto.");
+    },
+  });
+
+  const deleteMutation = trpc.products.delete.useMutation({
+    onSuccess: async () => {
+      await utils.products.list.invalidate();
+      toast.success("Produto removido");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Falha ao remover produto");
     },
   });
 
@@ -60,7 +76,57 @@ export default function AdminProducts() {
 
   const products = productsQuery.data?.data ?? [];
 
-  const handleCreateProduct = () => {
+  const filteredProducts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return products;
+    return products.filter((product) => {
+      const categoryName = categoryMap.get(product.categoryId)?.toLowerCase() ?? "";
+      return product.name.toLowerCase().includes(term) || categoryName.includes(term);
+    });
+  }, [products, searchTerm, categoryMap]);
+
+  const resetForm = () => {
+    setEditingProductId(null);
+    setName("");
+    setDescription("");
+    setLongDescription("");
+    setPrice("");
+    setImageUrl("");
+    setPreviewUrl("");
+    setCategoryId(null);
+    setFeatured(false);
+    setActive(true);
+    setErrorMessage(null);
+    setIsFormOpen(false);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (product: (typeof products)[number]) => {
+    setEditingProductId(product.id);
+    setName(product.name);
+    setDescription(product.description ?? "");
+    setLongDescription(product.longDescription ?? "");
+    setPrice(String(product.price));
+    setImageUrl(product.imageUrl ?? "");
+    setPreviewUrl(product.previewUrl ?? "");
+    setCategoryId(product.categoryId);
+    setFeatured(Boolean(product.featured));
+    setActive(Boolean(product.active));
+    setErrorMessage(null);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteProduct = (productId: number, productName: string) => {
+    const confirmed = window.confirm(`Deseja remover o produto \"${productName}\"?`);
+    if (!confirmed) return;
+    deleteMutation.mutate({ id: productId });
+  };
+
+  const handleSubmitProduct = () => {
     if (!name.trim() || !description.trim() || !longDescription.trim() || !price.trim() || !categoryId) {
       setErrorMessage("Preencha os campos obrigatórios para cadastrar o produto.");
       return;
@@ -73,7 +139,7 @@ export default function AdminProducts() {
     }
 
     setErrorMessage(null);
-    createMutation.mutate({
+    const payload = {
       name: name.trim(),
       description: description.trim(),
       longDescription: longDescription.trim(),
@@ -83,7 +149,17 @@ export default function AdminProducts() {
       previewUrl: previewUrl.trim(),
       featured,
       active,
-    });
+    };
+
+    if (editingProductId) {
+      updateMutation.mutate({
+        id: editingProductId,
+        ...payload,
+      });
+      return;
+    }
+
+    createMutation.mutate(payload);
   };
 
   return (
@@ -95,9 +171,15 @@ export default function AdminProducts() {
               <CardTitle>Produtos</CardTitle>
               <p className="text-sm text-muted-foreground">Gerencie catálogo, preços e status.</p>
             </div>
-            <Button onClick={() => setIsFormOpen((prev) => !prev)}>
-              {isFormOpen ? "Fechar" : "Novo produto"}
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Buscar produto ou categoria"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+              <Button onClick={openCreateForm}>Novo produto</Button>
+            </div>
           </CardHeader>
           <CardContent>
             {productsQuery.isLoading ? <p>Carregando produtos...</p> : null}
@@ -107,11 +189,13 @@ export default function AdminProducts() {
                   <TableHead>Produto</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Preço</TableHead>
+                  <TableHead>Destaque</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{categoryMap.get(product.categoryId) ?? `#${product.categoryId}`}</TableCell>
@@ -122,10 +206,39 @@ export default function AdminProducts() {
                       })}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{product.active ? "Ativo" : "Inativo"}</Badge>
+                      <Badge variant={product.featured ? "default" : "outline"}>
+                        {product.featured ? "Sim" : "Não"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.active ? "secondary" : "outline"}>
+                        {product.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEditForm(product)}>
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteProduct(product.id, product.name)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {!productsQuery.isLoading && filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
+                      Nenhum produto encontrado para o filtro informado.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           </CardContent>
@@ -134,12 +247,12 @@ export default function AdminProducts() {
         {isFormOpen ? (
           <Card>
             <CardHeader>
-              <CardTitle>Cadastrar novo produto</CardTitle>
+              <CardTitle>{editingProductId ? "Editar produto" : "Cadastrar novo produto"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {errorMessage ? (
                 <Alert variant="destructive">
-                  <AlertTitle>Erro ao cadastrar</AlertTitle>
+                  <AlertTitle>Erro ao salvar</AlertTitle>
                   <AlertDescription>{errorMessage}</AlertDescription>
                 </Alert>
               ) : null}
@@ -204,9 +317,18 @@ export default function AdminProducts() {
                 </label>
               </div>
 
-              <Button onClick={handleCreateProduct} disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Salvando..." : "Salvar produto"}
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleSubmitProduct} disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending
+                    ? "Salvando..."
+                    : editingProductId
+                    ? "Atualizar produto"
+                    : "Salvar produto"}
+                </Button>
+                <Button variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}
