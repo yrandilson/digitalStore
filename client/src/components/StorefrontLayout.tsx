@@ -21,15 +21,16 @@ import {
 import {
   ArrowRight,
   BookOpen,
+  House,
   LayoutDashboard,
   Menu,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
   UserCircle2,
-  X,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 
 const publicLinks = [
   { href: "/products", label: "Produtos", icon: ShoppingBag },
@@ -45,11 +46,19 @@ const adminLinks = [
 export function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const { totalItems } = useCart();
   const { user } = useAuth();
+  const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopSideMenuOpen, setDesktopSideMenuOpen] = useState(false);
 
   const navLinks = user?.role === "admin"
     ? [...publicLinks, ...adminLinks]
     : publicLinks;
+
+  const sideMenuLinks = [
+    { href: "/", label: "Início", icon: House },
+    ...navLinks,
+    { href: user ? "/profile" : "/login", label: user ? "Perfil" : "Entrar", icon: UserCircle2 },
+  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -164,6 +173,54 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main>{children}</main>
+
+      {/* Desktop Right Side Menu */}
+      <aside
+        className={cn(
+          "fixed right-0 top-1/2 z-40 hidden -translate-y-1/2 transition-transform duration-300 lg:block",
+          desktopSideMenuOpen ? "translate-x-0" : "translate-x-[calc(100%-3.5rem)]"
+        )}
+        onMouseEnter={() => setDesktopSideMenuOpen(true)}
+        onMouseLeave={() => setDesktopSideMenuOpen(false)}
+      >
+        <div className="w-56 rounded-l-2xl border border-white/50 bg-gradient-to-b from-background/95 via-background/90 to-muted/90 p-2 shadow-2xl backdrop-blur-xl">
+          <div className="mb-2 flex items-center justify-between px-2 py-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Navegar</p>
+            <span className="inline-flex h-6 items-center rounded-md bg-muted px-2 text-[10px] font-medium text-muted-foreground">
+              hover
+            </span>
+          </div>
+
+          <nav className="space-y-1">
+            {sideMenuLinks.map((item) => {
+              const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+
+              return (
+                <Link
+                  key={`side-${item.href}`}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200",
+                    isActive
+                      ? "bg-slate-950 text-white shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-white" : "text-muted-foreground")} />
+                  <span
+                    className={cn(
+                      "whitespace-nowrap transition-all duration-200",
+                      desktopSideMenuOpen ? "opacity-100" : "opacity-0"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
 
       <footer className="border-t bg-muted/30">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
