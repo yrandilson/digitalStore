@@ -74,6 +74,26 @@ export default function AdminOrders() {
       currency: "BRL",
     });
 
+  const selectedOrderSubtotal = selectedOrder
+    ? selectedOrder.items.reduce(
+        (acc, item) => acc + Number(item.productPrice) * Number(item.quantity ?? 1),
+        0
+      )
+    : 0;
+
+  const selectedOrderItemsCount = selectedOrder
+    ? selectedOrder.items.reduce((acc, item) => acc + Number(item.quantity ?? 1), 0)
+    : 0;
+
+  const handleMarkAsCompleted = () => {
+    if (!selectedOrder) return;
+
+    updateStatusMutation.mutate({
+      id: selectedOrder.id,
+      status: "completed",
+    });
+  };
+
   return (
     <DashboardLayout>
       <Card>
@@ -227,6 +247,17 @@ export default function AdminOrders() {
                   <Badge variant={statusVariants[selectedOrder.status] || "secondary"}>
                     {statusLabels[selectedOrder.status] || selectedOrder.status}
                   </Badge>
+                  <Button
+                    size="sm"
+                    onClick={handleMarkAsCompleted}
+                    disabled={selectedOrder.status === "completed" || updateStatusMutation.isPending}
+                  >
+                    {selectedOrder.status === "completed"
+                      ? "Já concluído"
+                      : updateStatusMutation.isPending
+                      ? "Atualizando..."
+                      : "Marcar como concluído"}
+                  </Button>
                 </div>
               </div>
 
@@ -245,10 +276,30 @@ export default function AdminOrders() {
                           <p className="font-medium">{item.productName}</p>
                           <p className="text-xs text-muted-foreground">Qtd: {item.quantity}</p>
                         </div>
-                        <p className="font-semibold">{formatCurrency(item.productPrice)}</p>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Unitário: {formatCurrency(item.productPrice)}</p>
+                          <p className="font-semibold">
+                            {formatCurrency(Number(item.productPrice) * Number(item.quantity ?? 1))}
+                          </p>
+                        </div>
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Itens</span>
+                  <span>{selectedOrderItemsCount}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatCurrency(selectedOrderSubtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-base font-semibold pt-2 border-t">
+                  <span>Total do pedido</span>
+                  <span>{formatCurrency(selectedOrder.totalAmount)}</span>
                 </div>
               </div>
 
