@@ -14,9 +14,11 @@ import {
 import {
   ArrowRight,
   BookOpen,
+  Compass,
   House,
   LayoutDashboard,
   Menu,
+  Search,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
@@ -63,6 +65,30 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
             </span>
             <span>Digital Store</span>
           </Link>
+
+          {/* Desktop top utility strip (replaces old menu area) */}
+          <div className="hidden flex-1 items-center justify-center md:flex">
+            <div className="flex w-full max-w-md items-center gap-2 rounded-xl border bg-background/80 p-1 shadow-sm">
+              <Link
+                href="/products"
+                className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Search className="h-4 w-4" />
+                Buscar produtos
+              </Link>
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+              >
+                <Compass className="h-3.5 w-3.5" />
+                Explorar
+              </Link>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-2 text-[11px] font-semibold text-amber-900">
+                <Sparkles className="h-3.5 w-3.5" />
+                Entrega imediata
+              </span>
+            </div>
+          </div>
 
           <div className="flex items-center gap-2">
             {totalItems > 0 && (
