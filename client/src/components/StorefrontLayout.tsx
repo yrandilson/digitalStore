@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -16,9 +24,12 @@ import {
   ArrowRight,
   BookOpen,
   Compass,
+  Download,
   House,
   LayoutDashboard,
+  LogOut,
   Menu,
+  Package,
   Search,
   ShoppingBag,
   ShoppingCart,
@@ -43,10 +54,11 @@ const adminLinks = [
 
 export function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const { totalItems } = useCart();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSideMenuOpen, setDesktopSideMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [topSearchValue, setTopSearchValue] = useState("");
   const [topSearchFocused, setTopSearchFocused] = useState(false);
   const debouncedTopSearch = useDebounce(topSearchValue, 250);
@@ -76,6 +88,12 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
     }
     setTopSearchFocused(false);
     setLocation("/products");
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setProfileMenuOpen(false);
+    setLocation("/");
   };
 
   return (
@@ -159,11 +177,69 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {user ? (
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/profile" aria-label="Perfil">
-                  <UserCircle2 className="h-5 w-5" />
-                </Link>
-              </Button>
+              <DropdownMenu open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
+                <div
+                  className="hidden md:block"
+                  onMouseEnter={() => setProfileMenuOpen(true)}
+                  onMouseLeave={() => setProfileMenuOpen(false)}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Perfil">
+                      <UserCircle2 className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <p className="truncate text-sm font-medium">{user.name || "Minha conta"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{user.email || "Conta ativa"}</p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        <UserCircle2 className="h-4 w-4" />
+                        Meu perfil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/orders" className="cursor-pointer">
+                        <Package className="h-4 w-4" />
+                        Meus pedidos
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/downloads" className="cursor-pointer">
+                        <Download className="h-4 w-4" />
+                        Meus downloads
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/products" className="cursor-pointer">
+                        <ShoppingBag className="h-4 w-4" />
+                        Meus produtos
+                      </Link>
+                    </DropdownMenuItem>
+                    {user.role === "admin" ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard" className="cursor-pointer">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Painel admin
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        void handleLogout();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </div>
+              </DropdownMenu>
             ) : (
               <Button size="sm" asChild>
                 <Link href="/login">Entrar</Link>
