@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -26,6 +33,7 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
 export default function AdminOrders() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
   const { data, isLoading } = trpc.orders.listAll.useQuery({
@@ -37,6 +45,9 @@ export default function AdminOrders() {
   const updateStatusMutation = trpc.orders.updateStatus.useMutation({
     onSuccess: () => {
       utils.orders.listAll.invalidate();
+      if (selectedOrderId) {
+        utils.orders.byId.invalidate({ id: selectedOrderId });
+      }
       toast.success("Status do pedido atualizado");
     },
     onError: (err) => {
@@ -46,6 +57,22 @@ export default function AdminOrders() {
 
   const orders = data?.data ?? [];
   const pagination = data?.pagination;
+
+  const {
+    data: selectedOrder,
+    isLoading: detailsLoading,
+  } = trpc.orders.byId.useQuery(
+    { id: selectedOrderId ?? 0 },
+    { enabled: selectedOrderId !== null }
+  );
+
+  const closeDetails = () => setSelectedOrderId(null);
+
+  const formatCurrency = (value: string | number) =>
+    Number(value).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
 
   return (
     <DashboardLayout>
@@ -114,25 +141,34 @@ export default function AdminOrders() {
                         {new Date(order.createdAt).toLocaleDateString("pt-BR")}
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={order.status}
-                          onValueChange={(newStatus) => {
-                            updateStatusMutation.mutate({
-                              id: order.id,
-                              status: newStatus as any,
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pendente</SelectItem>
-                            <SelectItem value="completed">Concluído</SelectItem>
-                            <SelectItem value="failed">Falhou</SelectItem>
-                            <SelectItem value="refunded">Reembolsado</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={order.status}
+                            onValueChange={(newStatus) => {
+                              updateStatusMutation.mutate({
+                                id: order.id,
+                                status: newStatus as any,
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="w-[130px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendente</SelectItem>
+                              <SelectItem value="completed">Concluído</SelectItem>
+                              <SelectItem value="failed">Falhou</SelectItem>
+                              <SelectItem value="refunded">Reembolsado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedOrderId(order.id)}
+                          >
+                            Detalhes
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -157,6 +193,72 @@ export default function AdminOrders() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={selectedOrderId !== null} onOpenChange={(open) => !open && closeDetails()}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Pedido {selectedOrder ? `#${selectedOrder.id}` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas do pedido, cliente e itens comprados.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+          ) : !selectedOrder ? (
+            <p className="text-sm text-muted-foreground">Pedido não encontrado.</p>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border p-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{selectedOrder.customerName || "—"}</p>
+                  <p className="text-sm text-muted-foreground">{selectedOrder.customerEmail || "—"}</p>
+                </div>
+                <div className="rounded-lg border p-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">Pagamento</p>
+                  <p className="font-medium">{formatCurrency(selectedOrder.totalAmount)}</p>
+                  <Badge variant={statusVariants[selectedOrder.status] || "secondary"}>
+                    {statusLabels[selectedOrder.status] || selectedOrder.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground mb-3">Itens</p>
+                <div className="space-y-2">
+                  {selectedOrder.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum item neste pedido.</p>
+                  ) : (
+                    selectedOrder.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                      >
+                        <div>
+                          <p className="font-medium">{item.productName}</p>
+                          <p className="text-xs text-muted-foreground">Qtd: {item.quantity}</p>
+                        </div>
+                        <p className="font-semibold">{formatCurrency(item.productPrice)}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Criado em {new Date(selectedOrder.createdAt).toLocaleString("pt-BR")}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
