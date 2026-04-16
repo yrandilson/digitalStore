@@ -3,13 +3,6 @@ import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -71,40 +64,12 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
             <span>Digital Store</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <NavigationMenu className="hidden md:flex">
-            <NavigationMenuList>
-              {navLinks.map((item) => (
-                <NavigationMenuItem key={item.href}>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              ))}
-            </NavigationMenuList>
-          </NavigationMenu>
-
           <div className="flex items-center gap-2">
             {totalItems > 0 && (
               <Badge variant="secondary" className="hidden sm:inline-flex">
                 {totalItems} {totalItems === 1 ? "item" : "itens"}
               </Badge>
             )}
-
-            <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
-              <Link href="/cart">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Carrinho
-                {totalItems > 0 && (
-                  <Badge variant="default" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
-                    {totalItems}
-                  </Badge>
-                )}
-              </Link>
-            </Button>
 
             {user ? (
               <Button variant="ghost" size="icon" asChild>
