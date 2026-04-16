@@ -4,6 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -26,6 +27,8 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const publicLinks = [
   { href: "/products", label: "Produtos", icon: ShoppingBag },
@@ -41,9 +44,12 @@ const adminLinks = [
 export function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const { totalItems } = useCart();
   const { user } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSideMenuOpen, setDesktopSideMenuOpen] = useState(false);
+  const [topSearchValue, setTopSearchValue] = useState("");
+  const [topSearchFocused, setTopSearchFocused] = useState(false);
+  const debouncedTopSearch = useDebounce(topSearchValue, 250);
 
   const navLinks = user?.role === "admin"
     ? [...publicLinks, ...adminLinks]
@@ -54,6 +60,23 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
     ...navLinks,
     { href: user ? "/profile" : "/login", label: user ? "Perfil" : "Entrar", icon: UserCircle2 },
   ];
+
+  const { data: topSearchResults, isLoading: topSearchLoading } = trpc.products.search.useQuery(
+    { query: debouncedTopSearch, limit: 6 },
+    { enabled: debouncedTopSearch.trim().length > 1 }
+  );
+
+  const showTopSuggestions = topSearchFocused && topSearchValue.trim().length > 1;
+
+  const handleTopSearchSubmit = () => {
+    const query = topSearchValue.trim();
+    if (!query) {
+      setLocation("/products");
+      return;
+    }
+    setTopSearchFocused(false);
+    setLocation("/products");
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -68,14 +91,24 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
 
           {/* Desktop top utility strip (replaces old menu area) */}
           <div className="hidden flex-1 items-center justify-center md:flex">
-            <div className="flex w-full max-w-md items-center gap-2 rounded-xl border bg-background/80 p-1 shadow-sm">
-              <Link
-                href="/products"
-                className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <Search className="h-4 w-4" />
-                Buscar produtos
-              </Link>
+            <div className="relative flex w-full max-w-xl items-center gap-2 rounded-xl border bg-background/80 p-1 shadow-sm">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={topSearchValue}
+                  onChange={(e) => setTopSearchValue(e.target.value)}
+                  onFocus={() => setTopSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setTopSearchFocused(false), 160)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleTopSearchSubmit();
+                    }
+                  }}
+                  placeholder="Buscar produtos..."
+                  className="h-9 border-0 bg-transparent pl-9 pr-2 text-sm shadow-none focus-visible:ring-0"
+                />
+              </div>
               <Link
                 href="/products"
                 className="inline-flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
@@ -87,6 +120,34 @@ export function StorefrontLayout({ children }: { children: React.ReactNode }) {
                 <Sparkles className="h-3.5 w-3.5" />
                 Entrega imediata
               </span>
+
+              {showTopSuggestions ? (
+                <div className="absolute left-1 top-[calc(100%+0.45rem)] z-50 w-[calc(100%-8.8rem)] rounded-xl border bg-background p-2 shadow-xl">
+                  {topSearchLoading ? (
+                    <p className="px-2 py-2 text-xs text-muted-foreground">Buscando...</p>
+                  ) : topSearchResults && topSearchResults.length > 0 ? (
+                    <div className="space-y-1">
+                      {topSearchResults.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`/products/${product.slug}`}
+                          className="flex items-center justify-between rounded-lg px-2 py-2 text-sm transition-colors hover:bg-accent"
+                        >
+                          <span className="truncate pr-2">{product.name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {Number(product.price).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-2 py-2 text-xs text-muted-foreground">Nenhum produto encontrado.</p>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
 
