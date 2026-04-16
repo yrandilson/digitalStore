@@ -2,6 +2,10 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { productsRouter } from "./_core/productsRouter";
+import { ordersRouter } from "./_core/ordersRouter";
+import { usersRouter } from "./_core/usersRouter";
+import { downloadsRouter } from "./_core/downloadsRouter";
+import { reviewsRouter } from "./_core/reviewsRouter";
 import { publicProcedure, router } from "./_core/trpc";
 
 export const appRouter = router({
@@ -19,13 +23,10 @@ export const appRouter = router({
   }),
 
   products: productsRouter,
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  orders: ordersRouter,
+  users: usersRouter,
+  downloads: downloadsRouter,
+  reviews: reviewsRouter,
 });
 
 export type AppRouter = typeof appRouter;

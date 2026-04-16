@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "./trpc";
+import { router, publicProcedure, adminProcedure } from "./trpc";
 import { getDb } from "../db";
 import { products, categories } from "../../drizzle/schema";
 import { and, asc, count, desc, eq, like } from "drizzle-orm";
@@ -160,7 +160,7 @@ export const productsRouter = router({
   /**
    * Create a new product
    */
-  create: publicProcedure
+  create: adminProcedure
     .input(
       z.object({
         name: z.string().min(2).max(255),
@@ -178,7 +178,7 @@ export const productsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
 
-      const slug = input.name
+      let baseSlug = input.name
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -186,14 +186,18 @@ export const productsRouter = router({
         .replace(/^-+|-+$/g, "")
         .slice(0, 80);
 
-      const existing = await db
-        .select({ id: products.id })
-        .from(products)
-        .where(eq(products.slug, slug))
-        .limit(1);
-
-      if (existing[0]) {
-        throw new Error("Já existe produto com o mesmo slug");
+      // Auto-increment slug on collision (e.g. meu-produto, meu-produto-2, meu-produto-3)
+      let slug = baseSlug;
+      let suffix = 1;
+      while (true) {
+        const existing = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(eq(products.slug, slug))
+          .limit(1);
+        if (!existing[0]) break;
+        suffix++;
+        slug = `${baseSlug}-${suffix}`;
       }
 
       await db.insert(products).values({
@@ -221,4 +225,83 @@ export const productsRouter = router({
 
       return created[0];
     }),
+
+  /**
+   * Update an existing product (admin only)
+   */
+  update: adminProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        name: z.string().min(2).max(255).optional(),
+        description: z.string().min(2).optional(),
+        longDescription: z.string().min(2).optional(),
+        price: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+        categoryId: z.number().int().positive().optional(),
+        imageUrl: z.string().url().optional().or(z.literal("")),
+        previewUrl: z.string().url().optional().or(z.literal("")),
+        featured: z.boolean().optional(),
+        active: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+
+      const { id, ...updateData } = input;
+      const cleanData: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(updateData)) {
+        if (value !== undefined) {
+          cleanData[key] = value === "" ? null : value;
+        }
+      }
+
+      if (Object.keys(cleanData).length === 0) {
+        throw new Error("Nenhum campo para atualizar");
+      }
+
+      await db.update(products).set(cleanData).where(eq(products.id, id));
+
+      const [updated] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+      if (!updated) throw new Error("Produto não encontrado");
+
+      return updated;
+    }),
+
+  /**
+   * Delete a product (admin only)
+   */
+  delete: adminProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+
+      const [existing] = await db.select({ id: products.id }).from(products).where(eq(products.id, input.id)).limit(1);
+      if (!existing) throw new Error("Produto não encontrado");
+
+      await db.delete(products).where(eq(products.id, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Get stats for dashboard (admin only)
+   */
+  stats: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database connection failed");
+
+    const [totalResult] = await db.select({ count: count() }).from(products);
+    const [activeResult] = await db
+      .select({ count: count() })
+      .from(products)
+      .where(eq(products.active, true));
+
+    return {
+      totalProducts: Number(totalResult?.count || 0),
+      activeProducts: Number(activeResult?.count || 0),
+    };
+  }),
 });

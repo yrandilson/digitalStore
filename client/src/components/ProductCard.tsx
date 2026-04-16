@@ -1,10 +1,10 @@
-import React from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
-import { Star, ShoppingCart } from "lucide-react";
+import { Star, ShoppingCart, Check } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: number;
@@ -38,6 +38,26 @@ export function ProductCard({
 
   const ratingValue = rating ? parseFloat(rating) : 0;
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(
+      {
+        id,
+        name,
+        slug,
+        description: null,
+        price,
+        imageUrl: imageUrl ?? null,
+      },
+      1
+    );
+    toast.success("Adicionado ao carrinho", {
+      description: name,
+      icon: <Check className="h-4 w-4" />,
+    });
+  };
+
   return (
     <Link href={`/products/${slug}`}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
@@ -47,6 +67,7 @@ export function ProductCard({
             <img
               src={imageUrl}
               alt={name}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
             />
           ) : (
@@ -102,23 +123,7 @@ export function ProductCard({
             <span className="text-lg font-bold text-blue-600">
               {formattedPrice}
             </span>
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                addItem(
-                  {
-                    id,
-                    name,
-                    slug,
-                    description: null,
-                    price,
-                    imageUrl: imageUrl ?? null,
-                  },
-                  1
-                );
-              }}
-            >
+            <Button size="sm" onClick={handleAddToCart}>
               <ShoppingCart size={16} />
             </Button>
           </div>

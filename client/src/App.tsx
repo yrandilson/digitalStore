@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/contexts/CartContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -22,24 +23,47 @@ import Products from "./pages/Products";
 import Product from "./pages/Product";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      {/* Public routes */}
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/products"} component={Products} />
       <Route path={"/products/:slug"} component={Product} />
       <Route path={"/cart"} component={Cart} />
-      <Route path={"/checkout"} component={Checkout} />
-      <Route path={"/orders"} component={Orders} />
-      <Route path={"/downloads"} component={Downloads} />
-      <Route path={"/profile"} component={Profile} />
-      <Route path={"/dashboard"} component={Dashboard} />
-      <Route path={"/dashboard/products"} component={AdminProducts} />
-      <Route path={"/dashboard/orders"} component={AdminOrders} />
-      <Route path={"/dashboard/users"} component={AdminUsers} />
-      <Route path={"/dashboard/settings"} component={AdminSettings} />
+
+      {/* Authenticated user routes */}
+      <Route path={"/checkout"}>
+        <ProtectedRoute><Checkout /></ProtectedRoute>
+      </Route>
+      <Route path={"/orders"}>
+        <ProtectedRoute><Orders /></ProtectedRoute>
+      </Route>
+      <Route path={"/downloads"}>
+        <ProtectedRoute><Downloads /></ProtectedRoute>
+      </Route>
+      <Route path={"/profile"}>
+        <ProtectedRoute><Profile /></ProtectedRoute>
+      </Route>
+
+      {/* Admin routes */}
+      <Route path={"/dashboard"}>
+        <ProtectedRoute requireAdmin><Dashboard /></ProtectedRoute>
+      </Route>
+      <Route path={"/dashboard/products"}>
+        <ProtectedRoute requireAdmin><AdminProducts /></ProtectedRoute>
+      </Route>
+      <Route path={"/dashboard/orders"}>
+        <ProtectedRoute requireAdmin><AdminOrders /></ProtectedRoute>
+      </Route>
+      <Route path={"/dashboard/users"}>
+        <ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>
+      </Route>
+      <Route path={"/dashboard/settings"}>
+        <ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>
+      </Route>
+
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

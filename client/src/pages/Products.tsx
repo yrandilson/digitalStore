@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { StorefrontLayout } from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import { ProductCard } from "@/components/ProductCard";
@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function Products() {
   const [page, setPage] = useState(1);
@@ -22,6 +23,7 @@ export default function Products() {
     "newest"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Fetch products
   const { data: productsData, isLoading: productsLoading } = trpc.products.list.useQuery({
@@ -34,14 +36,38 @@ export default function Products() {
   // Fetch categories
   const { data: categories } = trpc.products.categories.useQuery();
 
-  // Search products
+  // Search products (debounced)
   const { data: searchResults, isLoading: searchLoading } = trpc.products.search.useQuery(
-    { query: searchQuery, limit: 20 },
-    { enabled: searchQuery.length > 2 }
+    { query: debouncedSearch, limit: 20 },
+    { enabled: debouncedSearch.length > 2 }
   );
 
-  const displayProducts = searchQuery.length > 2 ? searchResults : productsData?.data;
-  const isPaginated = searchQuery.length <= 2;
+  const displayProducts = debouncedSearch.length > 2 ? searchResults : productsData?.data;
+  const isPaginated = debouncedSearch.length <= 2;
+  const totalPages = productsData?.pagination?.totalPages || 1;
+
+  // Generate smart pagination numbers with ellipsis
+  const paginationNumbers = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "...")[] = [1];
+
+    if (page > 3) pages.push("...");
+
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (page < totalPages - 2) pages.push("...");
+
+    pages.push(totalPages);
+    return pages;
+  }, [page, totalPages]);
 
   return (
     <StorefrontLayout>
@@ -135,7 +161,7 @@ export default function Products() {
         {/* Loading State */}
         {(productsLoading || searchLoading) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="space-y-4">
                 <Skeleton className="h-48 w-full rounded-lg" />
                 <Skeleton className="h-4 w-3/4" />
@@ -164,11 +190,12 @@ export default function Products() {
               ))}
             </div>
 
-            {/* Pagination */}
-            {isPaginated && productsData?.pagination && (
-              <div className="flex justify-center items-center gap-4 mt-12">
+            {/* Pagination with ellipsis */}
+            {isPaginated && productsData?.pagination && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
                 >
@@ -176,27 +203,30 @@ export default function Products() {
                 </Button>
 
                 <div className="flex gap-1">
-                  {Array.from({
-                    length: Math.min(5, productsData.pagination.totalPages),
-                  }).map((_, i) => {
-                    const pageNum = i + 1;
-                    return (
+                  {paginationNumbers.map((pageNum, idx) =>
+                    pageNum === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="flex items-center px-2 text-muted-foreground">
+                        …
+                      </span>
+                    ) : (
                       <Button
                         key={pageNum}
                         variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
                         onClick={() => setPage(pageNum)}
-                        className="w-10 h-10 p-0"
+                        className="w-9 h-9 p-0"
                       >
                         {pageNum}
                       </Button>
-                    );
-                  })}
+                    )
+                  )}
                 </div>
 
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setPage(page + 1)}
-                  disabled={page >= productsData.pagination.totalPages}
+                  disabled={page >= totalPages}
                 >
                   Próximo
                 </Button>
